@@ -48,11 +48,25 @@ io.on("connection", (socket: Socket) => {
     io.emit("getUsers", Array.from(onlineUsers));
   });
 
-  socket.on("sendMessage", (data) => {
+  socket.on("sendMessage", async (data) => {
     const sendUserSocket = onlineUsers.get(data.to);
     if (sendUserSocket) {
       socket.to(sendUserSocket).emit("getMessage", data);
+      await Message.findOneAndUpdate(
+        { _id: data.message._id },
+        { status: "delivered" }
+      );
     }
+  });
+
+  socket.on("seen", async (data) => {
+    const sendUserSocket = onlineUsers.get(data.from);
+    await Message.findOneAndUpdate(
+      { _id: data.message._id },
+      { status: "seen" }
+    );
+
+    io.to(sendUserSocket).emit("message-seen", "seen");
   });
 
   socket.on("sendMessageChatGPT", async (data: any) => {

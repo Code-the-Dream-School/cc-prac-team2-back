@@ -80,7 +80,7 @@ exports.createMessage = catchAsync(
       url: process.env.TRANSLATE_URL,
       headers: {
         "content-type": "application/json",
-        "X-RapidAPI-Key": process.env.API_KEY,
+        "X-RapidAPI-Key": process.env.TRANSLATE_API_KEY,
         "X-RapidAPI-Host": process.env.API_HOST,
       },
       data: {
@@ -264,15 +264,3 @@ exports.deleteVoiceNote = catchAsync(
   }
 );
 
-/// voice-translate
-
-// exports.createVoiceTranslate = catchAsync(
-//   async (req: Request, res: Response, next: NextFunction) => {
-
-//     res.status(200).json({
-//       status: "success",
-//       data: response.data,
-//     });
-
-//   }
-// );

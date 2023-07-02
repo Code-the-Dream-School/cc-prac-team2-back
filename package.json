@@ -14,6 +14,9 @@
     "@google-cloud/speech": "^5.5.0",
     "axios": "^1.4.0",
     "bcryptjs": "^2.4.3",
+    "blob": "^0.1.0",
+    "buffer-to-stream": "^1.0.0",
+    "buffer-to-uint8array": "^1.1.0",
     "cloudinary": "^1.37.1",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
@@ -29,7 +32,10 @@
     "passport": "^0.6.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
+    "play-sound": "^1.1.5",
     "socket.io": "^4.6.2",
+    "stream-to-blob": "^2.0.1",
+    "streamifier": "^0.1.1",
     "validator": "^13.9.0"
   },
   "devDependencies": {

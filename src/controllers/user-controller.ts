@@ -22,7 +22,7 @@ exports.getUsers = catchAsync(
       _id: { $ne: currentUser._id },
       conversations: { $in: currentUser.conversations },
     })
-      .select("_id userName conversations profileImage language")
+      .select("_id userName conversations profileImage language email")
       .populate(populateOptions);
 
     contactedUsers.forEach((user: any) => {
@@ -39,6 +39,7 @@ exports.getUsers = catchAsync(
         conversation: user.conversations[0],
         conversations: undefined,
         language: user.language,
+        email: user.email,
       };
     });
 
@@ -137,72 +138,159 @@ exports.getUserConversation = catchAsync(
 
 exports.updateProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { userId } = req.params;
+    try {
+      const { userId } = req.params;
 
-    const form = new multiparty.Form();
-
-    form.parse(req, async function (err: any, fields: any, files: any) {
-      let result: any;
-
-      if (files.image) {
-        if (
-          files.image[0].originalFilename.substr(-4, 4) == ".png" ||
-          files.image[0].originalFilename.substr(-4, 4) == ".jpg" ||
-          files.image[0].originalFilename.substr(-4, 4) == "jpeg"
-        ) {
-          result = await cloudinary.uploader.upload(files.image[0].path, {
-            folder: "profile",
+      const form = new multiparty.Form();
+  
+      form.parse(req, async function (err: any, fields: any, files: any) {
+   
+          let result: any;
+  
+    
+          if (files.image) {
+            if (
+              files.image[0].originalFilename.substr(-4, 4) == ".png" ||
+              files.image[0].originalFilename.substr(-4, 4) == ".jpg" ||
+              files.image[0].originalFilename.substr(-4, 4) == "jpeg"
+            ) {
+              result = await cloudinary.uploader.upload(files.image[0].path, {
+                folder: "profile",
+              });
+            } else {
+              return next(
+                new AppError(
+                  "the only image format accepted are .jpg, .png and .jpeg",
+                  422
+                )
+              );
+            }
+          }
+    
+          const { userName, public_id, language } = fields;
+    
+          if (public_id) cloudinary.uploader.destroy(public_id[0]);
+    
+          let updateObj: any = {
+            profileImage: { public_id: result?.public_id, url: result?.url },
+          };
+          if (!updateObj.profileImage.public_id) updateObj = {};
+    
+          if (userName) updateObj.userName = userName[0];
+    
+          if (language[0]) {
+            try {
+              const options = {
+                method: "POST",
+                url: process.env.TRANSLATE_URL,
+                headers: {
+                  "content-type": "application/json",
+                  "X-RapidAPI-Key": process.env.TRANSLATE_API_KEY,
+                  "X-RapidAPI-Host": process.env.API_HOST,
+                },
+                data: {
+                  text: "welcome",
+                  target: language,
+                },
+              };
+              const response = await axios.request(options);
+              const welcome = response.data[0].result.text;
+              updateObj.language = language[0];
+              updateObj.welcome = welcome;
+            } catch (err) {
+              console.log(err)
+            }
+          
+          }
+          
+          const user = await User.findOneAndUpdate({ _id: userId }, updateObj, {
+            new: true,
           });
-        } else {
-          return next(
-            new AppError(
-              "the only image format accepted are .jpg, .png and .jpeg",
-              422
-            )
-          );
-        }
-      }
+          if (!user) {
+            return next(new AppError("No user found with the provided Id", 404));
+          }
+    
+          res.status(200).json({
+            success: "true",
+            user,
+          });
+       
 
-      const { userName, public_id, language } = fields;
-
-      if (public_id) cloudinary.uploader.destroy(public_id[0]);
-
-      let updateObj: any = {
-        profileImage: { public_id: result?.public_id, url: result?.url },
-      };
-      if (!updateObj.profileImage.public_id) updateObj = {};
-
-      if (userName) updateObj.userName = userName[0];
-      if (language[0]) {
-        const options = {
-          method: "POST",
-          url: process.env.TRANSLATE_URL,
-          headers: {
-            "content-type": "application/json",
-            "X-RapidAPI-Key": process.env.API_KEY,
-            "X-RapidAPI-Host": process.env.API_HOST,
-          },
-          data: {
-            text: "welcome",
-            target: language,
-          },
-        };
-        const response = await axios.request(options);
-        const welcome = response.data[0].result.text;
-        updateObj.language = language[0];
-        updateObj.welcome = welcome;
-      }
-      const user = await User.findOneAndUpdate({ _id: userId }, updateObj, {
-        new: true,
       });
-      if (!user) {
-        return next(new AppError("No user found with the provided Id", 404));
-      }
+    } catch (err) {
+      console.log(err)
+    }
 
-      res.status(200).json({
-        success: "true",
-        user,
-      });
-    });
   }
 );
+
+
+
+
+// dotenv.config({ path: "./config.env" });
+
+// cloudinary.config({
+//   cloud_name: process.env.CLOUD_NAME,
+//   api_key: process.env.API_KEY,
+//   api_secret: process.env.API_SECRET,
+// });
+
+// const encodedParams = new URLSearchParams();
+// encodedParams.set(
+//   "src",
+//   "my name is abdulazeez and i am a student of bayero university"
+// );
+// encodedParams.set("hl", "en-us");
+// encodedParams.set("r", "0");
+// encodedParams.set("c", "mp3");
+// encodedParams.set("f", "8khz_8bit_mono");
+
+// const options = {
+//   method: "POST",
+//   url: "https://voicerss-text-to-speech.p.rapidapi.com/",
+//   params: {
+//     key: "01537add834e4932a9494a9ef7cdd290",
+//   },
+//   headers: {
+//     "content-type": "application/x-www-form-urlencoded",
+//     "X-RapidAPI-Key": "33a8952a40msh04e26314bd4ef39p1548cejsn2f05c0e1d8c5",
+//     "X-RapidAPI-Host": "voicerss-text-to-speech.p.rapidapi.com",
+//   },
+//   data: encodedParams,
+// };
+
+// exports.test = async () => {
+//   try {
+//     const response = await axios.request(options);
+//     const audioData = response.data;
+//     const audioBuffer = Buffer.from(audioData);
+//     const audioStream = bufferToStream(audioBuffer);
+
+
+//     const chunks = [];
+//     audioStream.on("data", (chunk) => {
+//       chunks.push(chunk);
+//     });
+
+
+//     audioStream.on("end", () => {
+
+//       const buffer = Buffer.concat(chunks);
+
+
+//       const uint8Array = bufferToUint8Array(buffer);
+
+
+//       const blob = {
+//         data: uint8Array,
+//         size: uint8Array.length,
+//         type: "audio/mp3",
+//       };
+//       console.log(blob);
+//     });
+//     // console.log(audioStream);
+//   } catch (err) {
+//     console.log(`err: ${err}`);
+//   }
+// };
+
